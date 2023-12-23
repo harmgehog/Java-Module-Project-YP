@@ -1,41 +1,44 @@
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 
 public class BillCalc {
-    private List<String> items;
-    private double totalCost;
+    private final List<String> items;
+    private BigDecimal totalCost;
+    private BigDecimal totalCostPerPerson;
+    private final BigDecimal persons;
 
-    public BillCalc() {
-        items = new ArrayList<>();
-        totalCost = 0;
+    public BillCalc(int persons) {
+        this.items = new ArrayList<>();
+        this.totalCost = BigDecimal.valueOf(0.00);
+        this.totalCostPerPerson = BigDecimal.valueOf(0.00);
+        this.persons = BigDecimal.valueOf(persons);
     }
 
-    public void addItem(String itemName, double itemPrice) {
-        String item = String.format("%s, %.2f", itemName, itemPrice);
+    public void addItem(String itemName, String price) {
+        BigDecimal itemPrice = new BigDecimal(price.trim()).setScale(2, RoundingMode.HALF_UP);
+        String item = itemName + ", " + itemPrice;
         items.add(item);
-        totalCost += itemPrice;
+        totalCost = totalCost.add(itemPrice);
+        totalCostPerPerson = totalCost.divide(persons, RoundingMode.HALF_UP);
     }
 
-    void showTotal() {
-        System.out.println(totalEnding(totalCost));
-    }
-
-    void showByPerson(int persons) {
-        System.out.println(totalEnding(totalCost / persons));
-    }
-
-    void showList() {
+    public void printTotal() {
+        System.out.println("Количество посетителей: " + persons.setScale(0, RoundingMode.DOWN));
+        System.out.println("Общая сумма счета: " + totalEnding(totalCost));
+        System.out.println("Каждый посетитель должен заплатить: " + totalEnding(totalCostPerPerson));
+        System.out.println("\nВсе позиции меню: ");
         for (int i = 0; i < items.size(); i++) {
-            String[] parts = items.get(i).split(",");
-            double itemPrice = Double.parseDouble(parts[1].trim());
-
-            System.out.println((i + 1) + ". " + parts[0].trim() + " - " + totalEnding(itemPrice));
+            String name = items.get(i).split(",")[0];
+            BigDecimal price = new BigDecimal(items.get(i).split(", ")[1]);
+            System.out.println((i+1) + ". " + name + " - " + totalEnding(price));
         }
     }
 
-    private String totalEnding(double value) {
-        int rub = (int) value;
-        int kop = (int) ((value - rub) * 100);
+    private String totalEnding(BigDecimal val) {
+        double rub = val.setScale(0, RoundingMode.DOWN).doubleValue();
+        double kop = val.multiply(BigDecimal.valueOf(100)).setScale(0, RoundingMode.DOWN).doubleValue() % 100;
 
         String endRub;
         if (rub % 100 > 10 && rub % 100 < 15) endRub = "рублей";
@@ -44,11 +47,11 @@ public class BillCalc {
         else endRub = "рублей";
 
         String endKop;
-        if (kop % 100 > 10 && kop % 100 < 15) endKop = "копеек";
+        if (kop > 10 && kop < 15) endKop = "копеек";
         else if (kop % 10 > 1 && kop % 10 < 5) endKop = "копейки";
         else if (kop % 10 == 1) endKop = "копейка";
         else endKop = "копеек";
 
-        return String.format("%d %s %02d %s", rub, endRub, kop, endKop);
+        return String.format("%.0f %s %.0f %s", rub, endRub, kop, endKop);
     }
 }
